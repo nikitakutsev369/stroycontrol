@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { admins, foremen, sessions } from '../schema';
 import { User, Foreman } from '../types';
+import { AuthError, ErrorMessages, handleError } from '../errors';
 
 interface LoginProps {
   onLogin: (user: User | Foreman, role: 'admin' | 'foreman') => void;
@@ -20,14 +21,20 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     setTimeout(() => {
-      const user = admins.authenticate(name, password);
-      if (user) {
-        const session = sessions.create({ userId: user.id, role: 'admin' });
-        onLogin(user, 'admin');
-      } else {
-        setError('Неверное имя или пароль');
+      try {
+        const user = admins.authenticate(name, password);
+        if (user) {
+          const session = sessions.create({ userId: user.id, role: 'admin' });
+          onLogin(user, 'admin');
+        } else {
+          throw new AuthError(ErrorMessages.invalidCredentials);
+        }
+      } catch (err) {
+        handleError(err);
+        setError(err instanceof AuthError ? err.message : ErrorMessages.invalidCredentials);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }, 500);
   };
 
@@ -37,14 +44,20 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true);
 
     setTimeout(() => {
-      const foreman = foremen.authenticate(name, pin);
-      if (foreman) {
-        const session = sessions.create({ foremanId: foreman.id, role: 'foreman' });
-        onLogin(foreman, 'foreman');
-      } else {
-        setError('Неверное имя или PIN-код');
+      try {
+        const foreman = foremen.authenticate(name, pin);
+        if (foreman) {
+          const session = sessions.create({ foremanId: foreman.id, role: 'foreman' });
+          onLogin(foreman, 'foreman');
+        } else {
+          throw new AuthError(ErrorMessages.invalidCredentials);
+        }
+      } catch (err) {
+        handleError(err);
+        setError(err instanceof AuthError ? err.message : ErrorMessages.invalidCredentials);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }, 500);
   };
 
