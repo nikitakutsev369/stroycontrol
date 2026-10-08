@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { admins, foremen, sessions } from '../schema';
 import { User, Foreman } from '../types';
 import { Errors, ErrorMessages, handleError, isAppError } from '../errors';
+import { config } from '../config';
+import { oauth } from '../oauth';
 
 interface LoginProps {
   onLogin: (user: User | Foreman, role: 'admin' | 'foreman') => void;
@@ -172,6 +174,30 @@ export default function Login({ onLogin }: LoginProps) {
               {loading ? 'Вход...' : 'Войти'}
             </button>
           </form>
+
+          {/* OAuth Login */}
+          {config.oauthEnabled && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <div className="relative mb-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-2 bg-white text-gray-500">или</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => oauth.startLogin()}
+                className="w-full py-3 rounded-xl font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition shadow-sm flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Войти через Kimi
+              </button>
+            </div>
+          )}
 
           {/* Demo credentials */}
           <div className="mt-6 pt-6 border-t border-gray-100">

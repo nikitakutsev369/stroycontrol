@@ -100,11 +100,46 @@ npm start
 
 ## 🔐 Авторизация
 
+### Локальная авторизация
+- **Администратор** — вход по имени + пароль
+- **Прораб** — вход по имени + PIN-код
+
+### OAuth через Kimi
+Полная интеграция с Kimi Open Platform:
+
+1. **Начало OAuth flow:**
+   ```
+   GET /api/auth/oauth/start?redirect_uri=...
+   ```
+   Перенаправляет на Kimi для авторизации
+
+2. **OAuth callback:**
+   ```
+   GET /api/auth/oauth/callback?code=...&state=...
+   ```
+   Обменивает code на access_token, получает профиль пользователя
+
+3. **JWT токены:**
+   - Session tokens подписываются через HMAC-SHA256
+   - Access tokens проверяются через JWKS от Kimi
+   - Срок действия: 1 год
+
+### Сессии
 Сессии хранятся в httpOnly cookies (`kimi_sid`):
 - `httpOnly: true` — защита от XSS
 - `secure: true` — только HTTPS (кроме localhost)
 - `sameSite: 'None'` — для cross-domain
 - `maxAge: 1 год`
+
+### Middleware авторизации
+```typescript
+import { authMiddleware } from "./middleware/auth";
+
+app.get("/protected", authMiddleware, async (c) => {
+  const user = c.get("user");
+  // ...
+});
+```
 
 ## 📁 Структура
 

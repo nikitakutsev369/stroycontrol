@@ -180,11 +180,13 @@ Frontend автоматически раздаётся backend через `serve
 ## 📝 Следующие шаги
 
 ### Готово к реализации:
-1. ✅ **Система авторизации** — админ + прорабы с PIN
-2. ✅ **Сессии** — localStorage (demo) + cookies (production)
+1. ✅ **Система авторизации** — админ + прорабы с PIN + OAuth через Kimi
+2. ✅ **Сессии** — localStorage (demo) + JWT cookies (production)
 3. ✅ **CRUD операции** — централизованы в schema.ts
-4. ✅ **API клиент** — готов к подключению backend
+4. ✅ **API клиент** — готов к подключению backend (HttpClient с таймаутами)
 5. ✅ **Конфигурация** — переменные окружения + feature flags
+6. ✅ **Backend** — Hono + Drizzle ORM + MySQL
+7. ✅ **OAuth** — полная интеграция с Kimi Open Platform (jose + JWKS)
 
 ### Для production:
 1. **Backend сервер** (Hono/Express):
