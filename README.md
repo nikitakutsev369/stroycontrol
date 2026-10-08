@@ -141,7 +141,60 @@ npm run preview
 - **Tailwind CSS** — стилизация
 - **date-fns** — работа с датами
 - **Vite** — сборщик
-- **localStorage** — временное хранилище
+- **localStorage** — временное хранилище (demo mode)
+
+## ⚙️ Конфигурация
+
+### Переменные окружения
+
+Создайте файл `.env` на основе `.env.example`:
+
+```bash
+# API Configuration
+VITE_API_BASE_URL=http://localhost:3000/api
+
+# App Info
+VITE_APP_NAME=СтройКонтроль
+VITE_APP_VERSION=1.0.0
+
+# Feature Flags
+VITE_ENABLE_DEMO_MODE=true
+VITE_OAUTH_ENABLED=false
+VITE_OAUTH_CALLBACK_URL=/auth/callback
+```
+
+### Режимы работы
+
+**Demo Mode** (`VITE_ENABLE_DEMO_MODE=true`):
+- Данные хранятся в localStorage
+- Не требует backend сервера
+- Подходит для разработки и демонстрации
+
+**API Mode** (`VITE_ENABLE_DEMO_MODE=false`):
+- Данные загружаются через API
+- Требуется backend сервер
+- Используется в production
+
+### Backend конфигурация
+
+Для production backend требует следующие переменные:
+
+```bash
+# OAuth (Kimi)
+APP_ID=your_app_id
+APP_SECRET=your_app_secret
+KIMI_AUTH_URL=https://open.kimi.com/oauth
+KIMI_OPEN_URL=https://open.kimi.com/api
+
+# Database
+DATABASE_URL=mysql://user:pass@localhost:3306/stroycontrol
+
+# Owner
+OWNER_UNION_ID=owner_union_id
+
+# Environment
+NODE_ENV=production
+```
 
 ## 📄 Лицензия
 

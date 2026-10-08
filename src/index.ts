@@ -12,5 +12,11 @@ export * from './schema';
 // Реэкспорт ошибок
 export * from './errors';
 
+// Реэкспорт конфигурации
+export * from './config';
+
+// Реэкспорт API клиента
+export * from './api';
+
 // Реэкспорт утилит
 export * from './utils/seed';
