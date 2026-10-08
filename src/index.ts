@@ -15,6 +15,9 @@ export * from './errors';
 // Реэкспорт конфигурации
 export * from './config';
 
+// Реэкспорт HTTP клиента
+export * from './http-client';
+
 // Реэкспорт API клиента
 export * from './api';
 

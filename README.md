@@ -173,6 +173,35 @@ backend/
 └── .env
 ```
 
+### Использование HttpClient:
+
+```typescript
+import { HttpClient } from './http-client';
+
+const client = new HttpClient('https://api.example.com');
+
+// GET запрос
+const projects = await client.get<Project[]>('/projects');
+
+// POST запрос
+const newProject = await client.post<Project>('/projects', {
+  name: 'ЖК Солнечный',
+  address: 'ул. Ленина, 1'
+});
+
+// PATCH запрос
+await client.patch(`/projects/${id}`, { status: 'completed' });
+
+// DELETE запрос
+await client.delete(`/projects/${id}`);
+
+// С query параметрами
+const stages = await client.get<Stage[]>('/stages', { projectId: '123' });
+
+// С кастомным таймаутом
+const data = await client.get('/slow-endpoint', undefined, { timeout: 60000 });
+```
+
 ## 🛠️ Технологии
 
 - **React 18** — UI фреймворк
