@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'foreman';
 
 export interface User {
   id: string;
@@ -10,6 +10,20 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastSignInAt: string;
+}
+
+export interface Session {
+  userId?: string;
+  foremanId?: string;
+  role: UserRole;
+  expiresAt: string;
+}
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  user?: User;
+  foreman?: Foreman;
+  session?: Session;
 }
 
 export interface Project {

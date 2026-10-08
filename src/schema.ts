@@ -227,3 +227,109 @@ export function writeAll(data: {
   write(KEYS.stages, data.stages);
   write(KEYS.notifications, data.notifications);
 }
+
+// === SESSIONS ===
+import { Session, User } from './types';
+
+const SESSION_KEY = 'sk_session';
+const SESSION_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000; // 1 год
+
+export const sessions = {
+  create: (data: {
+    userId?: string;
+    foremanId?: string;
+    role: 'admin' | 'foreman';
+  }): Session => {
+    const session: Session = {
+      ...data,
+      expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  },
+  
+  get: (): Session | null => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const session: Session = JSON.parse(raw);
+      // Проверка истечения
+      if (new Date(session.expiresAt) < new Date()) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return session;
+    } catch {
+      return null;
+    }
+  },
+  
+  destroy: (): void => {
+    localStorage.removeItem(SESSION_KEY);
+  },
+  
+  isValid: (): boolean => {
+    const session = sessions.get();
+    return session !== null && new Date(session.expiresAt) > new Date();
+  },
+};
+
+// === ADMIN USERS (упрощённая версия) ===
+const ADMIN_KEY = 'sk_admin';
+
+function uuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+export const admins = {
+  get: (): (User & { password: string }) | null => {
+    try {
+      const raw = localStorage.getItem(ADMIN_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+  
+  create: (data: {
+    name: string;
+    email?: string;
+    password: string;
+  }): User => {
+    const user: User & { password: string } = {
+      id: uuid(),
+      unionId: `admin_${Date.now()}`,
+      name: data.name,
+      email: data.email,
+      role: 'admin',
+      password: data.password,
+      createdAt: now(),
+      updatedAt: now(),
+      lastSignInAt: now(),
+    };
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(user));
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  },
+  
+  authenticate: (name: string, password: string): User | null => {
+    try {
+      const raw = localStorage.getItem(ADMIN_KEY);
+      if (!raw) return null;
+      const stored = JSON.parse(raw);
+      if (stored.name === name && stored.password === password) {
+        stored.lastSignInAt = now();
+        localStorage.setItem(ADMIN_KEY, JSON.stringify(stored));
+        const { password: _, ...userWithoutPassword } = stored;
+        return userWithoutPassword;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+};

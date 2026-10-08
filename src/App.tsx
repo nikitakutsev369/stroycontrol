@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Project, Brigade, Foreman, Stage, Notification, ViewMode } from './types';
-import { projects as projectsDB, crews as crewsDB, foremen as foremenDB, stages as stagesDB, notifications as notificationsDB, isSeeded, setSeeded, seedAll, writeAll } from './schema';
+import { Project, Brigade, Foreman, Stage, Notification, ViewMode, User } from './types';
+import { projects as projectsDB, crews as crewsDB, foremen as foremenDB, stages as stagesDB, notifications as notificationsDB, isSeeded, setSeeded, seedAll, writeAll, sessions, admins } from './schema';
 import { getSeedData } from './utils/seed';
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO, differenceInDays, isBefore, format } from 'date-fns';
@@ -10,6 +10,7 @@ import GanttChart from './components/GanttChart';
 import ProjectManager from './components/ProjectManager';
 import BrigadeManager from './components/BrigadeManager';
 import Notifications from './components/Notifications';
+import Login from './components/Login';
 
 function App() {
   const [view, setView] = useState<ViewMode>('dashboard');
@@ -20,6 +21,11 @@ function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  
+  // Auth state
+  const [currentUser, setCurrentUser] = useState<User | Foreman | null>(null);
+  const [currentRole, setCurrentRole] = useState<'admin' | 'foreman' | null>(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
 
   // Initial load + seed
   useEffect(() => {
@@ -39,7 +45,45 @@ function App() {
     }
     setNotifications(notificationsDB.select());
     setLoaded(true);
+    
+    // Создаём дефолтного админа если его нет
+    if (!admins.get()) {
+      admins.create({ name: 'Админ', password: 'admin', email: 'admin@stroycontrol.ru' });
+    }
   }, []);
+
+  // Check auth on mount
+  useEffect(() => {
+    const session = sessions.get();
+    if (session) {
+      if (session.role === 'admin' && session.userId) {
+        const user = admins.get();
+        if (user && user.id === session.userId) {
+          setCurrentUser(user);
+          setCurrentRole('admin');
+        }
+      } else if (session.role === 'foreman' && session.foremanId) {
+        const foreman = foremenDB.findById(session.foremanId);
+        if (foreman) {
+          setCurrentUser(foreman);
+          setCurrentRole('foreman');
+        }
+      }
+    }
+    setAuthLoaded(true);
+  }, []);
+
+  const handleLogin = (user: User | Foreman, role: 'admin' | 'foreman') => {
+    setCurrentUser(user);
+    setCurrentRole(role);
+  };
+
+  const handleLogout = () => {
+    sessions.destroy();
+    setCurrentUser(null);
+    setCurrentRole(null);
+    setView('dashboard');
+  };
 
   // Persist
   useEffect(() => { 
@@ -201,15 +245,18 @@ function App() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const navItems = [
-    { id: 'dashboard' as ViewMode, label: 'Панель', icon: '📊' },
-    { id: 'gantt' as ViewMode, label: 'Диаграмма Ганта', icon: '📅' },
-    { id: 'projects' as ViewMode, label: 'Объекты', icon: '🏗️' },
-    { id: 'brigades' as ViewMode, label: 'Бригады', icon: '👷' },
-    { id: 'notifications' as ViewMode, label: 'Уведомления', icon: '🔔', badge: unreadCount },
+  // Навигация зависит от роли
+  const allNavItems = [
+    { id: 'dashboard' as ViewMode, label: 'Панель', icon: '📊', roles: ['admin', 'foreman'] },
+    { id: 'gantt' as ViewMode, label: 'Диаграмма Ганта', icon: '📅', roles: ['admin', 'foreman'] },
+    { id: 'projects' as ViewMode, label: 'Объекты', icon: '🏗️', roles: ['admin'] },
+    { id: 'brigades' as ViewMode, label: 'Бригады', icon: '👷', roles: ['admin'] },
+    { id: 'notifications' as ViewMode, label: 'Уведомления', icon: '🔔', roles: ['admin', 'foreman'], badge: unreadCount },
   ];
+  
+  const navItems = allNavItems.filter(item => currentRole && item.roles.includes(currentRole));
 
-  if (!loaded) {
+  if (!loaded || !authLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -218,6 +265,11 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  // Show login if not authenticated
+  if (!currentUser || !currentRole) {
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
@@ -281,10 +333,28 @@ function App() {
             </button>
             
             <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                <span className="text-white text-xs font-bold">АД</span>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                currentRole === 'admin' 
+                  ? 'bg-gradient-to-br from-blue-500 to-indigo-500' 
+                  : 'bg-gradient-to-br from-purple-500 to-pink-500'
+              }`}>
+                <span className="text-white text-xs font-bold">
+                  {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </span>
               </div>
-              <span className="text-sm font-medium text-gray-700 hidden sm:block">Админ</span>
+              <div className="hidden sm:block">
+                <span className="text-sm font-medium text-gray-700 block leading-tight">{currentUser.name}</span>
+                <span className="text-xs text-gray-400">{currentRole === 'admin' ? 'Администратор' : 'Прораб'}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="ml-2 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                title="Выйти"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
             </div>
           </div>
         </header>
