@@ -123,6 +123,8 @@ npm start
    - Session tokens подписываются через HMAC-SHA256
    - Access tokens проверяются через JWKS от Kimi
    - Срок действия: 1 год
+   - Строгая валидация payload (unionId, clientId обязательны)
+   - Подробное логирование ошибок верификации
 
 4. **Kimi API Client:**
    ```typescript

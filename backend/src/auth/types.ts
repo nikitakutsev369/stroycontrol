@@ -12,3 +12,8 @@ export interface UserProfile {
   avatar_url?: string;
   email?: string;
 }
+
+export interface SessionPayload {
+  unionId: string;
+  clientId: string;
+}
