@@ -14,21 +14,42 @@
 ## 📁 Структура проекта
 
 ```
-src/
-├── components/          # React компоненты
-│   ├── Dashboard.tsx    # Панель управления
-│   ├── GanttChart.tsx   # Диаграмма Ганта
-│   ├── ProjectManager.tsx  # Управление проектами
-│   ├── BrigadeManager.tsx  # Управление бригадами
-│   ├── Notifications.tsx   # Уведомления
-│   └── Login.tsx        # Страница входа
-├── schema.ts            # Схема данных (CRUD операции)
-├── types.ts             # TypeScript типы
-├── errors.ts            # Классы ошибок и сообщения
-├── index.ts             # Реэкспорт типов и утилит
-├── App.tsx              # Главный компонент
-└── utils/
-    └── seed.ts          # Демо-данные
+stroycontrol/
+├── src/                    # Frontend (React)
+│   ├── components/         # React компоненты
+│   │   ├── Dashboard.tsx   # Панель управления
+│   │   ├── GanttChart.tsx  # Диаграмма Ганта
+│   │   ├── ProjectManager.tsx
+│   │   ├── BrigadeManager.tsx
+│   │   ├── Notifications.tsx
+│   │   └── Login.tsx
+│   ├── schema.ts           # CRUD операции
+│   ├── types.ts            # TypeScript типы
+│   ├── errors.ts           # Система ошибок
+│   ├── config.ts           # Конфигурация
+│   ├── api.ts              # API клиент
+│   ├── http-client.ts      # HTTP клиент
+│   ├── cookies.ts          # Работа с cookies
+│   ├── index.ts            # Реэкспорт
+│   ├── App.tsx             # Главный компонент
+│   └── utils/seed.ts       # Демо-данные
+│
+├── backend/                # Backend (Hono + Drizzle)
+│   ├── src/
+│   │   ├── index.ts        # Главный файл сервера
+│   │   ├── env.ts          # Переменные окружения
+│   │   ├── errors.ts       # Система ошибок
+│   │   ├── db/
+│   │   │   ├── index.ts    # Подключение к БД
+│   │   │   └── schema.ts   # Drizzle ORM схема
+│   │   ├── routes/         # API endpoints
+│   │   └── middleware/     # Middleware
+│   ├── package.json
+│   └── README.md
+│
+├── package.json            # Frontend зависимости
+├── vite.config.js          # Vite конфигурация
+└── README.md               # Этот файл
 ```
 
 ## 🔐 Авторизация
@@ -110,19 +131,51 @@ export const projects = {
 
 ## 🚀 Запуск
 
+### Frontend (Development)
+
 ```bash
 # Установка зависимостей
 npm install
 
-# Разработка
+# Разработка (порт 5173)
 npm run dev
 
-# Сборка
+# Сборка в dist/public
 npm run build
-
-# Предпросмотр сборки
-npm run preview
 ```
+
+### Backend (Development)
+
+```bash
+cd backend
+
+# Установка зависимостей
+npm install
+
+# Настройка БД
+cp .env.example .env
+# Заполните DATABASE_URL
+
+# Применение схемы
+npm run db:push
+
+# Запуск сервера (порт 3000)
+npm run dev
+```
+
+### Production
+
+```bash
+# Frontend
+npm run build  # Сборка в dist/public
+
+# Backend
+cd backend
+npm run build
+npm start  # Запуск на порту 3000
+```
+
+Frontend автоматически раздаётся backend через `serveStaticFiles`.
 
 ## 📝 Следующие шаги
 
