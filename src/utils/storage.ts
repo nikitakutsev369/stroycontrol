@@ -1,32 +1,52 @@
-import { Project, Brigade, Notification } from '../types';
+import { Project, Brigade, Foreman, Stage, Notification } from '../types';
 
-const PROJECTS_KEY = 'construction_projects';
-const BRIGADES_KEY = 'construction_brigades';
-const NOTIFICATIONS_KEY = 'construction_notifications';
+const KEYS = {
+  projects: 'sk_projects',
+  brigades: 'sk_brigades',
+  foremen: 'sk_foremen',
+  stages: 'sk_stages',
+  notifications: 'sk_notifications',
+  seeded: 'sk_seeded',
+};
 
 export function getProjects(): Project[] {
-  const data = localStorage.getItem(PROJECTS_KEY);
-  return data ? JSON.parse(data) : [];
+  return JSON.parse(localStorage.getItem(KEYS.projects) || '[]');
 }
-
-export function saveProjects(projects: Project[]): void {
-  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+export function saveProjects(v: Project[]) {
+  localStorage.setItem(KEYS.projects, JSON.stringify(v));
 }
 
 export function getBrigades(): Brigade[] {
-  const data = localStorage.getItem(BRIGADES_KEY);
-  return data ? JSON.parse(data) : [];
+  return JSON.parse(localStorage.getItem(KEYS.brigades) || '[]');
+}
+export function saveBrigades(v: Brigade[]) {
+  localStorage.setItem(KEYS.brigades, JSON.stringify(v));
 }
 
-export function saveBrigades(brigades: Brigade[]): void {
-  localStorage.setItem(BRIGADES_KEY, JSON.stringify(brigades));
+export function getForemen(): Foreman[] {
+  return JSON.parse(localStorage.getItem(KEYS.foremen) || '[]');
+}
+export function saveForemen(v: Foreman[]) {
+  localStorage.setItem(KEYS.foremen, JSON.stringify(v));
+}
+
+export function getStages(): Stage[] {
+  return JSON.parse(localStorage.getItem(KEYS.stages) || '[]');
+}
+export function saveStages(v: Stage[]) {
+  localStorage.setItem(KEYS.stages, JSON.stringify(v));
 }
 
 export function getNotifications(): Notification[] {
-  const data = localStorage.getItem(NOTIFICATIONS_KEY);
-  return data ? JSON.parse(data) : [];
+  return JSON.parse(localStorage.getItem(KEYS.notifications) || '[]');
+}
+export function saveNotifications(v: Notification[]) {
+  localStorage.setItem(KEYS.notifications, JSON.stringify(v));
 }
 
-export function saveNotifications(notifications: Notification[]): void {
-  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+export function isSeeded(): boolean {
+  return localStorage.getItem(KEYS.seeded) === '1';
+}
+export function setSeeded() {
+  localStorage.setItem(KEYS.seeded, '1');
 }
