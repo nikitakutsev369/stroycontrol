@@ -48,7 +48,7 @@ function App() {
     setLoaded(true);
   }, []);
 
-  // Persist changes
+  // Persist
   useEffect(() => { if (loaded) saveProjects(projects); }, [projects, loaded]);
   useEffect(() => { if (loaded) saveBrigades(brigades); }, [brigades, loaded]);
   useEffect(() => { if (loaded) saveForemen(foremen); }, [foremen, loaded]);
@@ -77,36 +77,39 @@ function App() {
         const exists = notifications.find(n => n.stageId === stage.id && n.type === 'overdue' && !n.read);
         if (!exists) {
           newNotifs.push({
-            id: uuidv4(), projectId: project.id, projectName: project.name,
-            stageId: stage.id, stageName: stage.name,
-            message: `⚠️ Этап «${stage.name}» просрочен! Срок был ${format(endDate, 'd MMMM', { locale: ru })}`,
-            type: 'overdue', read: false, createdAt: new Date().toISOString()
+            id: uuidv4(), stageId: stage.id,
+            type: 'overdue',
+            title: `Просрочен: ${stage.name}`,
+            message: `Срок был ${format(endDate, 'd MMMM', { locale: ru })}. Проект: ${project.name}`,
+            read: false, createdAt: new Date().toISOString()
           });
         }
       }
 
       // Reminder 3 days before start
       if (daysUntilStart === 3) {
-        const exists = notifications.find(n => n.stageId === stage.id && n.type === 'reminder' && n.message.includes('начнётся через 3 дня'));
+        const exists = notifications.find(n => n.stageId === stage.id && n.type === 'starts_soon' && (n.message || '').includes('через 3 дня'));
         if (!exists) {
           newNotifs.push({
-            id: uuidv4(), projectId: project.id, projectName: project.name,
-            stageId: stage.id, stageName: stage.name,
-            message: `📅 Этап «${stage.name}» начнётся через 3 дня (${format(startDate, 'd MMMM', { locale: ru })})`,
-            type: 'reminder', read: false, createdAt: new Date().toISOString()
+            id: uuidv4(), stageId: stage.id,
+            type: 'starts_soon',
+            title: `Скоро начнётся: ${stage.name}`,
+            message: `Этап начнётся через 3 дня (${format(startDate, 'd MMMM', { locale: ru })}). Проект: ${project.name}`,
+            read: false, createdAt: new Date().toISOString()
           });
         }
       }
 
       // Reminder 1 day before end
       if (daysUntilEnd === 1) {
-        const exists = notifications.find(n => n.stageId === stage.id && n.type === 'reminder' && n.message.includes('заканчивается завтра'));
+        const exists = notifications.find(n => n.stageId === stage.id && n.type === 'starts_soon' && (n.message || '').includes('завтра'));
         if (!exists) {
           newNotifs.push({
-            id: uuidv4(), projectId: project.id, projectName: project.name,
-            stageId: stage.id, stageName: stage.name,
-            message: `⏰ Этап «${stage.name}» заканчивается завтра (${format(endDate, 'd MMMM', { locale: ru })})`,
-            type: 'reminder', read: false, createdAt: new Date().toISOString()
+            id: uuidv4(), stageId: stage.id,
+            type: 'starts_soon',
+            title: `Заканчивается завтра: ${stage.name}`,
+            message: `Срок выполнения ${format(endDate, 'd MMMM', { locale: ru })}. Проект: ${project.name}`,
+            read: false, createdAt: new Date().toISOString()
           });
         }
       }
@@ -148,16 +151,17 @@ function App() {
   const handleUpdateStageProgress = useCallback((stageId: string, progress: number, status: Stage['status']) => {
     setStages(prev => prev.map(s => {
       if (s.id !== stageId) return s;
-      const updated = { ...s, progress, status };
+      const updated: Stage = { ...s, progress, status, updatedAt: new Date().toISOString() };
       if (status === 'done' && s.status !== 'done') {
         updated.completedAt = new Date().toISOString();
         const project = projects.find(p => p.id === s.projectId);
         if (project) {
           setNotifications(prev => [{
-            id: uuidv4(), projectId: project.id, projectName: project.name,
-            stageId: s.id, stageName: s.name,
-            message: `✅ Этап «${s.name}» отмечен как выполненный (${progress}%)`,
-            type: 'completed', read: false, createdAt: new Date().toISOString()
+            id: uuidv4(), stageId: s.id,
+            type: 'completed',
+            title: `Завершён: ${s.name}`,
+            message: `Этап отмечен как выполненный (${progress}%). Проект: ${project.name}`,
+            read: false, createdAt: new Date().toISOString()
           }, ...prev]);
         }
       }
@@ -262,17 +266,13 @@ function App() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
             <p className="text-xs font-semibold text-blue-800">💡 Подсказка</p>
-            <p className="text-xs text-blue-600 mt-1">Отмечайте этапы как выполненные — система автоматически уведомит о прогрессе</p>
+            <p className="text-xs text-blue-600 mt-1">Прорабы входят по имени и PIN-коду. Уведомления приходят автоматически.</p>
           </div>
         </div>
       </aside>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>
-      )}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
 
-      {/* Main */}
       <main className="flex-1 min-w-0">
         <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl">

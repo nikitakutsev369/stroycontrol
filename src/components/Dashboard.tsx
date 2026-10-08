@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project, Brigade, Foreman, Stage, Notification } from '../types';
-import { format, differenceInDays, isAfter, isBefore, parseISO } from 'date-fns';
+import { format, differenceInDays, isBefore, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 interface DashboardProps {
@@ -12,7 +12,6 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ projects, brigades, foremen, stages, notifications }: DashboardProps) {
-  const activeProjects = projects.filter(p => p.status === 'active');
   const totalStages = stages.length;
   const completedStages = stages.filter(s => s.status === 'done').length;
   const inProgressStages = stages.filter(s => s.status === 'in_progress').length;
@@ -29,10 +28,6 @@ export default function Dashboard({ projects, brigades, foremen, stages, notific
 
   const getProjectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || '';
   const getBrigadeName = (crewId: string) => brigades.find(b => b.id === crewId)?.name || '';
-  const getForemanName = (foremanId?: string) => {
-    if (!foremanId) return '';
-    return foremen.find(f => f.id === foremanId)?.name || '';
-  };
 
   return (
     <div className="space-y-6">
@@ -51,7 +46,7 @@ export default function Dashboard({ projects, brigades, foremen, stages, notific
               </svg>
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">{activeProjects.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{projects.length}</div>
               <div className="text-xs text-gray-500">Проектов</div>
             </div>
           </div>
@@ -118,7 +113,7 @@ export default function Dashboard({ projects, brigades, foremen, stages, notific
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Прогресс по проектам</h2>
         <div className="space-y-5">
-          {activeProjects.map(project => {
+          {projects.map(project => {
             const projectStages = stages.filter(s => s.projectId === project.id);
             const completed = projectStages.filter(s => s.status === 'done').length;
             const total = projectStages.length;
@@ -129,7 +124,7 @@ export default function Dashboard({ projects, brigades, foremen, stages, notific
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <span className="text-sm font-semibold text-gray-800">{project.name}</span>
-                    <span className="text-xs text-gray-400 ml-2">{project.customer}</span>
+                    {project.customer && <span className="text-xs text-gray-400 ml-2">{project.customer}</span>}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-600">{completed}/{total} этапов</span>
@@ -145,8 +140,8 @@ export default function Dashboard({ projects, brigades, foremen, stages, notific
               </div>
             );
           })}
-          {activeProjects.length === 0 && (
-            <p className="text-gray-400 text-center py-6">Нет активных проектов</p>
+          {projects.length === 0 && (
+            <p className="text-gray-400 text-center py-6">Нет проектов</p>
           )}
         </div>
       </div>

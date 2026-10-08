@@ -13,6 +13,10 @@ function daysFromNow(n: number): string {
   return fmt(d);
 }
 
+function now() {
+  return new Date().toISOString();
+}
+
 export function getSeedData() {
   const projects: Project[] = [
     {
@@ -21,8 +25,7 @@ export function getSeedData() {
       address: 'ул. Строителей, 12',
       customer: 'ООО «СеверСтрой»',
       description: 'Монолитный жилой дом, 12 этажей',
-      status: 'active',
-      createdAt: daysFromNow(-30),
+      createdAt: now(),
     },
     {
       id: 'p2',
@@ -30,20 +33,19 @@ export function getSeedData() {
       address: 'пр. Победы, 45',
       customer: 'АО «Меридиан-Инвест»',
       description: 'Реконструкция фасада и внутренняя отделка',
-      status: 'active',
-      createdAt: daysFromNow(-20),
+      createdAt: now(),
     },
   ];
 
   const brigades: Brigade[] = [
-    { id: 'c1', name: 'Бригада №1', specialty: 'Монолитные работы' },
-    { id: 'c2', name: 'Бригада №2', specialty: 'Кровля и фасад' },
-    { id: 'c3', name: 'Бригада №3', specialty: 'Отделочные работы' },
+    { id: 'c1', name: 'Бригада №1', specialty: 'Монолитные работы', createdAt: now() },
+    { id: 'c2', name: 'Бригада №2', specialty: 'Кровля и фасад', createdAt: now() },
+    { id: 'c3', name: 'Бригада №3', specialty: 'Отделочные работы', createdAt: now() },
   ];
 
   const foremen: Foreman[] = [
-    { id: 'f1', name: 'Иван Петров', phone: '+7 900 111-22-33', pin: '1234', crewId: 'c1' },
-    { id: 'f2', name: 'Сергей Сидоров', phone: '+7 900 444-55-66', pin: '4321', crewId: 'c3' },
+    { id: 'f1', name: 'Иван Петров', phone: '+7 900 111-22-33', pin: '1234', crewId: 'c1', createdAt: now() },
+    { id: 'f2', name: 'Сергей Сидоров', phone: '+7 900 444-55-66', pin: '4321', crewId: 'c3', createdAt: now() },
   ];
 
   const stages: Stage[] = [
@@ -52,42 +54,49 @@ export function getSeedData() {
       name: 'Заливка фундамента',
       startDate: daysFromNow(-10), endDate: daysFromNow(-2),
       status: 'done', progress: 100, completedAt: daysFromNow(-2), sortOrder: 0,
+      createdAt: now(), updatedAt: now(),
     },
     {
       id: 's2', projectId: 'p1', crewId: 'c1', foremanId: 'f1',
       name: 'Возведение коробки (1–4 этаж)',
       startDate: daysFromNow(-1), endDate: daysFromNow(20),
       dependsOnId: 's1', status: 'in_progress', progress: 30, sortOrder: 1,
+      createdAt: now(), updatedAt: now(),
     },
     {
       id: 's3', projectId: 'p1', crewId: 'c2',
       name: 'Монтаж кровли',
       startDate: daysFromNow(22), endDate: daysFromNow(35),
       dependsOnId: 's2', status: 'planned', progress: 0, sortOrder: 2,
+      createdAt: now(), updatedAt: now(),
     },
     {
       id: 's4', projectId: 'p1', crewId: 'c3', foremanId: 'f2',
       name: 'Внутренняя отделка квартир',
       startDate: daysFromNow(25), endDate: daysFromNow(50),
       dependsOnId: 's2', status: 'planned', progress: 0, sortOrder: 3,
+      createdAt: now(), updatedAt: now(),
     },
     {
       id: 's5', projectId: 'p2', crewId: 'c2',
       name: 'Демонтаж старого фасада',
       startDate: daysFromNow(-5), endDate: daysFromNow(-1),
       status: 'done', progress: 100, completedAt: daysFromNow(-1), sortOrder: 0,
+      createdAt: now(), updatedAt: now(),
     },
     {
       id: 's6', projectId: 'p2', crewId: 'c2',
       name: 'Монтаж нового фасада',
       startDate: daysFromNow(0), endDate: daysFromNow(15),
       dependsOnId: 's5', status: 'in_progress', progress: 10, sortOrder: 1,
+      createdAt: now(), updatedAt: now(),
     },
     {
       id: 's7', projectId: 'p2', crewId: 'c3', foremanId: 'f2',
       name: 'Внутренняя отделка холла',
       startDate: daysFromNow(1), endDate: daysFromNow(14),
       status: 'planned', progress: 0, sortOrder: 2,
+      createdAt: now(), updatedAt: now(),
     },
   ];
 

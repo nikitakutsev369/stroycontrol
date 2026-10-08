@@ -25,6 +25,7 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
   const [fPin, setFPin] = useState('');
   const [fCrewId, setFCrewId] = useState('');
 
+  const now = () => new Date().toISOString();
   const resetBrigadeForm = () => { setBName(''); setBSpecialty(''); setEditingBrigade(null); setShowBrigadeForm(false); };
   const resetForemanForm = () => { setFName(''); setFPhone(''); setFPin(''); setFCrewId(''); setEditingForeman(null); setShowForemanForm(false); };
 
@@ -33,17 +34,17 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
     if (editingBrigade) {
       onSaveBrigade({ ...editingBrigade, name: bName, specialty: bSpecialty });
     } else {
-      onSaveBrigade({ id: uuidv4(), name: bName, specialty: bSpecialty });
+      onSaveBrigade({ id: uuidv4(), name: bName, specialty: bSpecialty, createdAt: now() });
     }
     resetBrigadeForm();
   };
 
   const handleSaveForeman = () => {
-    if (!fName.trim() || !fCrewId) return;
+    if (!fName.trim() || !fCrewId || !fPin) return;
     if (editingForeman) {
       onSaveForeman({ ...editingForeman, name: fName, phone: fPhone, pin: fPin, crewId: fCrewId });
     } else {
-      onSaveForeman({ id: uuidv4(), name: fName, phone: fPhone, pin: fPin, crewId: fCrewId });
+      onSaveForeman({ id: uuidv4(), name: fName, phone: fPhone, pin: fPin, crewId: fCrewId, createdAt: now() });
     }
     resetForemanForm();
   };
@@ -67,13 +68,10 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
         </div>
       </div>
 
-      {/* Brigade Form Modal */}
       {showBrigadeForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">{editingBrigade ? 'Редактировать бригаду' : 'Новая бригада'}</h2>
-            </div>
+            <div className="p-6 border-b border-gray-100"><h2 className="text-xl font-bold text-gray-900">{editingBrigade ? 'Редактировать бригаду' : 'Новая бригада'}</h2></div>
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Название бригады *</label>
@@ -102,13 +100,10 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
         </div>
       )}
 
-      {/* Foreman Form Modal */}
       {showForemanForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">{editingForeman ? 'Редактировать прораба' : 'Новый прораб'}</h2>
-            </div>
+            <div className="p-6 border-b border-gray-100"><h2 className="text-xl font-bold text-gray-900">{editingForeman ? 'Редактировать прораба' : 'Новый прораб'}</h2></div>
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">ФИО *</label>
@@ -126,8 +121,8 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
                 <input type="tel" value={fPhone} onChange={e => setFPhone(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="+7 (999) 123-45-67" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">PIN-код</label>
-                <input type="text" value={fPin} onChange={e => setFPin(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="1234" maxLength={4} />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">PIN-код *</label>
+                <input type="text" value={fPin} onChange={e => setFPin(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="1234" maxLength={16} />
                 <p className="text-xs text-gray-400 mt-1">Для авторизации прораба в системе</p>
               </div>
             </div>
@@ -139,7 +134,6 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
         </div>
       )}
 
-      {/* Brigades Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {brigades.map(brigade => {
           const brigadeForemen = foremen.filter(f => f.crewId === brigade.id);
@@ -151,9 +145,7 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900">{brigade.name}</h3>
@@ -184,7 +176,7 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
                       <div key={f.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
                         <div>
                           <p className="text-sm font-medium text-gray-800">{f.name}</p>
-                          <p className="text-xs text-gray-400">{f.phone}</p>
+                          <p className="text-xs text-gray-400">{f.phone} • PIN: {f.pin}</p>
                         </div>
                         <button onClick={() => onDeleteForeman(f.id)} className="p-1 text-gray-400 hover:text-red-500 transition">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -195,7 +187,7 @@ export default function BrigadeManager({ brigades, foremen, stages, onSaveBrigad
                 </div>
               )}
 
-              <button onClick={() => { setEditingBrigade(brigade); setBName(brigade.name); setBSpecialty(brigade.specialty); setShowBrigadeForm(true); }} className="mt-3 w-full text-sm text-blue-600 hover:text-blue-700 py-2 rounded-xl hover:bg-blue-50 transition font-medium">
+              <button onClick={() => { setEditingBrigade(brigade); setBName(brigade.name); setBSpecialty(brigade.specialty || ''); setShowBrigadeForm(true); }} className="mt-3 w-full text-sm text-blue-600 hover:text-blue-700 py-2 rounded-xl hover:bg-blue-50 transition font-medium">
                 Редактировать бригаду
               </button>
             </div>

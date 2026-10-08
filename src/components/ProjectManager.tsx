@@ -19,6 +19,7 @@ interface ProjectManagerProps {
 export default function ProjectManager({
   projects, brigades, foremen, stages, onSaveProject, onDeleteProject, onAddStage, onDeleteStage, onUpdateStage
 }: ProjectManagerProps) {
+  const now = () => new Date().toISOString();
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
@@ -27,8 +28,7 @@ export default function ProjectManager({
   const [pAddress, setPAddress] = useState('');
   const [pCustomer, setPCustomer] = useState('');
   const [pDescription, setPDescription] = useState('');
-  const [pStatus, setPStatus] = useState<Project['status']>('active');
-  
+
   const [showStageForm, setShowStageForm] = useState(false);
   const [stageProjectId, setStageProjectId] = useState('');
   const [editingStage, setEditingStage] = useState<Stage | null>(null);
@@ -40,47 +40,40 @@ export default function ProjectManager({
   const [sDependsOn, setSDependsOn] = useState('');
   const [sProgress, setSProgress] = useState(0);
   const [sStatus, setSStatus] = useState<StageStatus>('planned');
+  const [sComment, setSComment] = useState('');
 
-  const resetProjectForm = () => {
-    setPName(''); setPAddress(''); setPCustomer(''); setPDescription(''); setPStatus('active');
-    setEditingProject(null); setShowProjectForm(false);
-  };
-
-  const resetStageForm = () => {
-    setSName(''); setSStartDate(''); setSEndDate(''); setSCrewId(''); setSForemanId('');
-    setSDependsOn(''); setSProgress(0); setSStatus('planned'); setEditingStage(null); setShowStageForm(false);
-  };
+  const resetProjectForm = () => { setPName(''); setPAddress(''); setPCustomer(''); setPDescription(''); setEditingProject(null); setShowProjectForm(false); };
+  const resetStageForm = () => { setSName(''); setSStartDate(''); setSEndDate(''); setSCrewId(''); setSForemanId(''); setSDependsOn(''); setSProgress(0); setSStatus('planned'); setSComment(''); setEditingStage(null); setShowStageForm(false); };
 
   const handleSaveProject = () => {
     if (!pName.trim()) return;
     if (editingProject) {
-      onSaveProject({ ...editingProject, name: pName, address: pAddress, customer: pCustomer, description: pDescription, status: pStatus });
+      onSaveProject({ ...editingProject, name: pName, address: pAddress, customer: pCustomer, description: pDescription });
     } else {
-      onSaveProject({ id: uuidv4(), name: pName, address: pAddress, customer: pCustomer, description: pDescription, status: pStatus, createdAt: new Date().toISOString() });
+      onSaveProject({ id: uuidv4(), name: pName, address: pAddress, customer: pCustomer, description: pDescription, createdAt: now() });
     }
     resetProjectForm();
   };
 
   const handleEditProject = (p: Project) => {
-    setEditingProject(p); setPName(p.name); setPAddress(p.address); setPCustomer(p.customer); setPDescription(p.description); setPStatus(p.status);
+    setEditingProject(p); setPName(p.name); setPAddress(p.address || ''); setPCustomer(p.customer || ''); setPDescription(p.description || '');
     setShowProjectForm(true);
   };
 
-  const handleAddStage = (projectId: string) => {
-    setStageProjectId(projectId); resetStageForm(); setShowStageForm(true);
-  };
+  const handleAddStage = (projectId: string) => { setStageProjectId(projectId); resetStageForm(); setShowStageForm(true); };
 
   const handleSaveStage = () => {
     if (!sName.trim() || !sStartDate || !sEndDate) return;
     const projectStages = stages.filter(s => s.projectId === stageProjectId);
     
     if (editingStage) {
-      onUpdateStage({ ...editingStage, name: sName, startDate: sStartDate, endDate: sEndDate, crewId: sCrewId, foremanId: sForemanId || undefined, dependsOnId: sDependsOn || undefined, progress: sProgress, status: sStatus });
+      onUpdateStage({ ...editingStage, name: sName, startDate: sStartDate, endDate: sEndDate, crewId: sCrewId || undefined, foremanId: sForemanId || undefined, dependsOnId: sDependsOn || undefined, progress: sProgress, status: sStatus, comment: sComment, updatedAt: now() });
     } else {
       onAddStage({
-        id: uuidv4(), projectId: stageProjectId, crewId: sCrewId, foremanId: sForemanId || undefined,
+        id: uuidv4(), projectId: stageProjectId, crewId: sCrewId || undefined, foremanId: sForemanId || undefined,
         name: sName, startDate: sStartDate, endDate: sEndDate, dependsOnId: sDependsOn || undefined,
-        status: sStatus, progress: sProgress, sortOrder: projectStages.length,
+        status: sStatus, progress: sProgress, comment: sComment, sortOrder: projectStages.length,
+        createdAt: now(), updatedAt: now(),
       });
     }
     resetStageForm();
@@ -89,8 +82,8 @@ export default function ProjectManager({
   const handleEditStage = (stage: Stage) => {
     setStageProjectId(stage.projectId); setEditingStage(stage);
     setSName(stage.name); setSStartDate(stage.startDate); setSEndDate(stage.endDate);
-    setSCrewId(stage.crewId); setSForemanId(stage.foremanId || ''); setSDependsOn(stage.dependsOnId || '');
-    setSProgress(stage.progress); setSStatus(stage.status); setShowStageForm(true);
+    setSCrewId(stage.crewId || ''); setSForemanId(stage.foremanId || ''); setSDependsOn(stage.dependsOnId || '');
+    setSProgress(stage.progress); setSStatus(stage.status); setSComment(stage.comment || ''); setShowStageForm(true);
   };
 
   const getBrigadeName = (id: string) => brigades.find(b => b.id === id)?.name || '—';
@@ -101,17 +94,7 @@ export default function ProjectManager({
     switch (s) {
       case 'done': return { text: 'Завершён', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
       case 'in_progress': return { text: 'В работе', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
-      case 'overdue': return { text: 'Просрочен', cls: 'bg-red-50 text-red-700 border-red-200' };
       default: return { text: 'Запланирован', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
-    }
-  };
-
-  const projectStatusBadge = (s: string) => {
-    switch (s) {
-      case 'active': return { text: 'Активный', cls: 'bg-emerald-50 text-emerald-700' };
-      case 'paused': return { text: 'Приостановлен', cls: 'bg-amber-50 text-amber-700' };
-      case 'completed': return { text: 'Завершён', cls: 'bg-blue-50 text-blue-700' };
-      default: return { text: s, cls: 'bg-gray-50 text-gray-700' };
     }
   };
 
@@ -131,13 +114,10 @@ export default function ProjectManager({
         </button>
       </div>
 
-      {/* Project Form Modal */}
       {showProjectForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">{editingProject ? 'Редактировать объект' : 'Новый объект строительства'}</h2>
-            </div>
+            <div className="p-6 border-b border-gray-100"><h2 className="text-xl font-bold text-gray-900">{editingProject ? 'Редактировать объект' : 'Новый объект строительства'}</h2></div>
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Название объекта *</label>
@@ -155,14 +135,6 @@ export default function ProjectManager({
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Описание</label>
                 <textarea value={pDescription} onChange={e => setPDescription(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={2} placeholder="Описание объекта..." />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Статус</label>
-                <select value={pStatus} onChange={e => setPStatus(e.target.value as Project['status'])} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="active">Активный</option>
-                  <option value="paused">Приостановлен</option>
-                  <option value="completed">Завершён</option>
-                </select>
-              </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={resetProjectForm} className="px-5 py-2.5 text-gray-600 hover:text-gray-800 transition rounded-xl hover:bg-gray-100">Отмена</button>
@@ -172,13 +144,10 @@ export default function ProjectManager({
         </div>
       )}
 
-      {/* Stage Form Modal */}
       {showStageForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">{editingStage ? 'Редактировать этап' : 'Новый этап работ'}</h2>
-            </div>
+            <div className="p-6 border-b border-gray-100"><h2 className="text-xl font-bold text-gray-900">{editingStage ? 'Редактировать этап' : 'Новый этап работ'}</h2></div>
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Название этапа *</label>
@@ -224,13 +193,16 @@ export default function ProjectManager({
                     <option value="planned">Запланирован</option>
                     <option value="in_progress">В работе</option>
                     <option value="done">Завершён</option>
-                    <option value="overdue">Просрочен</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Прогресс: {sProgress}%</label>
-                  <input type="range" min="0" max="100" step="5" value={sProgress} onChange={e => setSProgress(Number(e.target.value))} className="w-full accent-blue-600" />
+                  <input type="range" min="0" max="100" step="5" value={sProgress} onChange={e => setSProgress(Number(e.target.value))} className="w-full accent-blue-600 mt-2" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Комментарий</label>
+                <textarea value={sComment} onChange={e => setSComment(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={2} placeholder="Комментарий прораба..." />
               </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
@@ -241,7 +213,6 @@ export default function ProjectManager({
         </div>
       )}
 
-      {/* Projects List */}
       <div className="space-y-4">
         {projects.map(project => {
           const isExpanded = expandedProject === project.id;
@@ -249,18 +220,14 @@ export default function ProjectManager({
           const completed = projectStages.filter(s => s.status === 'done').length;
           const total = projectStages.length;
           const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-          const ps = projectStatusBadge(project.status);
           
           return (
             <div key={project.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-5 cursor-pointer hover:bg-gray-50/50 transition" onClick={() => setExpandedProject(isExpanded ? null : project.id)}>
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="text-lg font-bold text-gray-900">{project.name}</h3>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${ps.cls}`}>{ps.text}</span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1.5 text-sm text-gray-500">
+                    <h3 className="text-lg font-bold text-gray-900">{project.name}</h3>
+                    <div className="flex items-center gap-4 mt-1.5 text-sm text-gray-500 flex-wrap">
                       {project.address && <span>📍 {project.address}</span>}
                       {project.customer && <span>🏢 {project.customer}</span>}
                     </div>
@@ -272,9 +239,7 @@ export default function ProjectManager({
                         <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                       </div>
                     </div>
-                    <svg className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <svg className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </div>
                 </div>
               </div>
@@ -296,19 +261,16 @@ export default function ProjectManager({
                         return (
                           <div key={stage.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition">
                             <div className="flex items-center gap-4 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-500 shrink-0">
-                                {stage.sortOrder + 1}
-                              </div>
+                              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-500 shrink-0">{stage.sortOrder + 1}</div>
                               <div className="min-w-0">
                                 <p className={`text-sm font-semibold truncate ${stage.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800'}`}>{stage.name}</p>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  <span className="text-xs text-gray-400">
-                                    {format(parseISO(stage.startDate), 'd MMM', { locale: ru })} — {format(parseISO(stage.endDate), 'd MMM', { locale: ru })}
-                                  </span>
+                                  <span className="text-xs text-gray-400">{format(parseISO(stage.startDate), 'd MMM', { locale: ru })} — {format(parseISO(stage.endDate), 'd MMM', { locale: ru })}</span>
                                   {stage.crewId && <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium">{getBrigadeName(stage.crewId)}</span>}
                                   {stage.foremanId && <span className="text-xs text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-medium">{getForemanName(stage.foremanId)}</span>}
                                   {stage.dependsOnId && <span className="text-xs text-gray-400">← {getStageName(stage.dependsOnId)}</span>}
                                 </div>
+                                {stage.comment && <p className="text-xs text-gray-500 mt-1 italic">💬 {stage.comment}</p>}
                               </div>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
