@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { admins, foremen, sessions } from '../schema';
 import { User, Foreman } from '../types';
-import { AuthError, ErrorMessages, handleError } from '../errors';
+import { Errors, ErrorMessages, handleError, isAppError } from '../errors';
 
 interface LoginProps {
   onLogin: (user: User | Foreman, role: 'admin' | 'foreman') => void;
@@ -27,11 +27,11 @@ export default function Login({ onLogin }: LoginProps) {
           const session = sessions.create({ userId: user.id, role: 'admin' });
           onLogin(user, 'admin');
         } else {
-          throw new AuthError(ErrorMessages.invalidCredentials);
+          throw Errors.unauthorized(ErrorMessages.invalidCredentials);
         }
       } catch (err) {
         handleError(err);
-        setError(err instanceof AuthError ? err.message : ErrorMessages.invalidCredentials);
+        setError(isAppError(err) ? err.message : ErrorMessages.invalidCredentials);
       } finally {
         setLoading(false);
       }
@@ -50,11 +50,11 @@ export default function Login({ onLogin }: LoginProps) {
           const session = sessions.create({ foremanId: foreman.id, role: 'foreman' });
           onLogin(foreman, 'foreman');
         } else {
-          throw new AuthError(ErrorMessages.invalidCredentials);
+          throw Errors.unauthorized(ErrorMessages.invalidCredentials);
         }
       } catch (err) {
         handleError(err);
-        setError(err instanceof AuthError ? err.message : ErrorMessages.invalidCredentials);
+        setError(isAppError(err) ? err.message : ErrorMessages.invalidCredentials);
       } finally {
         setLoading(false);
       }

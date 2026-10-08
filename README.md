@@ -56,12 +56,15 @@ src/
 - `admins` — администраторы
 
 ### Ошибки (`errors.ts`)
-Иерархия ошибок для единообразной обработки:
-- `AppError` — базовый класс
-- `AuthError` — ошибки авторизации
-- `ForbiddenError` — недостаточно прав
-- `ValidationError` — ошибки валидации
-- `NotFoundError` — данные не найдены
+Система ошибок через tagged unions (discriminated unions):
+- `AppError` — базовый тип с `tag`, `status`, `message`
+- `Errors.badRequest()` — 400 ошибки
+- `Errors.unauthorized()` — 401 ошибки авторизации
+- `Errors.forbidden()` — 403 недостаточно прав
+- `Errors.notFound()` — 404 данные не найдены
+- `Errors.internal()` — 500 внутренние ошибки
+- `isAppError()` — проверка типа ошибки
+- `handleError()` — обработка и логирование
 
 ### Типы (`types.ts`)
 Полная типизация всех сущностей:

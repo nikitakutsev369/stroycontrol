@@ -1,68 +1,33 @@
 /**
- * Централизованные ошибки приложения
- * Используются для единообразной обработки ошибок в UI и API
+ * Система ошибок через tagged unions (discriminated unions)
+ * Функциональный подход — проще сериализовать, нет проблем с instanceof
  */
 
-// === Базовый класс ===
-export class AppError extends Error {
-  public readonly code: string;
-  public readonly statusCode: number;
-  public readonly isOperational: boolean;
+// === Базовый тип ошибки ===
+export type AppError = {
+  tag: 'app_error';
+  status: number;
+  message: string;
+};
 
-  constructor(message: string, code: string, statusCode: number = 500, isOperational: boolean = true) {
-    super(message);
-    this.code = code;
-    this.statusCode = statusCode;
-    this.isOperational = isOperational;
-    Object.setPrototypeOf(this, AppError.prototype);
-  }
+// === Фабрика ошибок ===
+function appError(status: number, message: string): AppError {
+  return { tag: 'app_error', status, message };
 }
 
-// === Ошибки авторизации ===
-export class AuthError extends AppError {
-  constructor(message: string = ErrorMessages.unauthenticated, code: string = 'AUTH_ERROR') {
-    super(message, code, 401);
-  }
-}
-
-export class ForbiddenError extends AppError {
-  constructor(message: string = ErrorMessages.insufficientRole, code: string = 'FORBIDDEN') {
-    super(message, code, 403);
-  }
-}
-
-export class SessionExpiredError extends AppError {
-  constructor(message: string = 'Сессия истекла. Войдите снова.') {
-    super(message, 'SESSION_EXPIRED', 401);
-  }
-}
-
-// === Ошибки валидации ===
-export class ValidationError extends AppError {
-  public readonly fields: Record<string, string>;
-
-  constructor(message: string, fields: Record<string, string> = {}) {
-    super(message, 'VALIDATION_ERROR', 400);
-    this.fields = fields;
-  }
-}
-
-// === Ошибки данных ===
-export class NotFoundError extends AppError {
-  constructor(entity: string, id?: string) {
-    super(
-      id ? `${entity} с ID "${id}" не найден` : `${entity} не найден`,
-      'NOT_FOUND',
-      404
-    );
-  }
-}
-
-export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(message, 'CONFLICT', 409);
-  }
-}
+// === Фабрики конкретных ошибок ===
+export const Errors = {
+  // 4xx — клиентские ошибки
+  badRequest: (msg: string) => appError(400, msg),
+  unauthorized: (msg: string) => appError(401, msg),
+  forbidden: (msg: string) => appError(403, msg),
+  notFound: (msg: string) => appError(404, msg),
+  conflict: (msg: string) => appError(409, msg),
+  
+  // 5xx — серверные ошибки
+  internal: (msg: string) => appError(500, msg),
+  networkError: (msg: string) => appError(503, msg),
+} as const;
 
 // === Сообщения об ошибках ===
 export const ErrorMessages = {
@@ -70,7 +35,7 @@ export const ErrorMessages = {
   unauthenticated: 'Требуется авторизация',
   insufficientRole: 'Недостаточно прав',
   invalidCredentials: 'Неверные учётные данные',
-  sessionExpired: 'Сессия истекла',
+  sessionExpired: 'Сессия истекла. Войдите снова.',
   pinRequired: 'PIN-код обязателен',
   
   // Валидация
@@ -92,28 +57,14 @@ export const ErrorMessages = {
   timeout: 'Превышено время ожидания',
 } as const;
 
-// === Коды ошибок ===
-export const ErrorCodes = {
-  // Auth
-  AUTH_ERROR: 'AUTH_ERROR',
-  FORBIDDEN: 'FORBIDDEN',
-  SESSION_EXPIRED: 'SESSION_EXPIRED',
-  
-  // Validation
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  
-  // Data
-  NOT_FOUND: 'NOT_FOUND',
-  CONFLICT: 'CONFLICT',
-  
-  // Network
-  NETWORK_ERROR: 'NETWORK_ERROR',
-  TIMEOUT: 'TIMEOUT',
-} as const;
-
 // === Утилиты ===
 export function isAppError(error: unknown): error is AppError {
-  return error instanceof AppError;
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'tag' in error &&
+    error.tag === 'app_error'
+  );
 }
 
 export function getErrorMessage(error: unknown): string {
@@ -128,7 +79,7 @@ export function getErrorMessage(error: unknown): string {
 
 export function handleError(error: unknown): void {
   if (isAppError(error)) {
-    console.error(`[${error.code}] ${error.message}`);
+    console.error(`[HTTP ${error.status}] ${error.message}`);
     return;
   }
   console.error('Unhandled error:', error);
