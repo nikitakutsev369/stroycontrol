@@ -18,5 +18,8 @@ export * from './config';
 // Реэкспорт API клиента
 export * from './api';
 
+// Реэкспорт cookies
+export * from './cookies';
+
 // Реэкспорт утилит
 export * from './utils/seed';

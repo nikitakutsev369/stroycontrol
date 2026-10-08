@@ -126,13 +126,52 @@ npm run preview
 
 ## 📝 Следующие шаги
 
-1. **Подключить реальную БД** — MySQL + Drizzle ORM
-2. **API сервер** — Express/Fastify для CRUD операций
-3. **WebSocket** — для real-time обновлений
-4. **Email уведомления** — отправка писем прорабам
-5. **Мобильное приложение** — React Native для прорабов
-6. **Отчёты** — экспорт в PDF/Excel
-7. **Фотоотчёты** — загрузка фото с объектов
+### Готово к реализации:
+1. ✅ **Система авторизации** — админ + прорабы с PIN
+2. ✅ **Сессии** — localStorage (demo) + cookies (production)
+3. ✅ **CRUD операции** — централизованы в schema.ts
+4. ✅ **API клиент** — готов к подключению backend
+5. ✅ **Конфигурация** — переменные окружения + feature flags
+
+### Для production:
+1. **Backend сервер** (Hono/Express):
+   - Реализовать endpoints из `api.ts`
+   - Подключить MySQL через Drizzle ORM
+   - Настроить OAuth Kimi для авторизации
+   - Установить httpOnly cookies для сессий
+
+2. **WebSocket** — для real-time обновлений этапов
+
+3. **Email/SMS уведомления** — отправка писем прорабам
+
+4. **Мобильное приложение** — React Native для прорабов
+
+5. **Отчёты** — экспорт в PDF/Excel
+
+6. **Фотоотчёты** — загрузка фото с объектов
+
+### Архитектура backend:
+```
+backend/
+├── src/
+│   ├── index.ts          # Hono app
+│   ├── db/
+│   │   └── schema.ts     # Drizzle ORM схема (уже есть)
+│   ├── routes/
+│   │   ├── auth.ts       # /auth/login, /auth/logout, /auth/me
+│   │   ├── projects.ts   # CRUD projects
+│   │   ├── brigades.ts   # CRUD brigades
+│   │   ├── foremen.ts    # CRUD foremen
+│   │   ├── stages.ts     # CRUD stages
+│   │   └── notifications.ts
+│   ├── middleware/
+│   │   └── auth.ts       # Проверка сессии
+│   └── utils/
+│       ├── session.ts    # Управление сессиями
+│       └── cookie.ts     # Cookie options (уже есть)
+├── package.json
+└── .env
+```
 
 ## 🛠️ Технологии
 
@@ -167,13 +206,40 @@ VITE_OAUTH_CALLBACK_URL=/auth/callback
 
 **Demo Mode** (`VITE_ENABLE_DEMO_MODE=true`):
 - Данные хранятся в localStorage
+- Сессии в localStorage
 - Не требует backend сервера
 - Подходит для разработки и демонстрации
 
 **API Mode** (`VITE_ENABLE_DEMO_MODE=false`):
 - Данные загружаются через API
+- Сессии через httpOnly cookies (`kimi_sid`)
 - Требуется backend сервер
 - Используется в production
+
+### Интеграция с backend
+
+Frontend готов к работе с backend, который устанавливает httpOnly cookies:
+
+```typescript
+// Backend (Hono) устанавливает cookie:
+setCookie(c, 'kimi_sid', sessionId, {
+  httpOnly: true,
+  secure: !isLocalhost,
+  sameSite: isLocalhost ? 'Lax' : 'None',
+  path: '/',
+  maxAge: 365 * 24 * 60 * 60,
+});
+
+// Frontend читает сессию:
+const session = sessions.get(); // Автоматически определяет режим
+```
+
+**Cookie настройки:**
+- `httpOnly: true` — защита от XSS (устанавливается backend)
+- `secure: true` — только HTTPS (кроме localhost)
+- `sameSite: 'None'` — для cross-domain (production)
+- `sameSite: 'Lax'` — для localhost
+- `maxAge: 1 год` — срок действия сессии
 
 ### Backend конфигурация
 

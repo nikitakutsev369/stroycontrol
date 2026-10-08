@@ -13,6 +13,7 @@ export interface User {
 }
 
 export interface Session {
+  sessionId?: string;
   userId?: string;
   foremanId?: string;
   role: UserRole;

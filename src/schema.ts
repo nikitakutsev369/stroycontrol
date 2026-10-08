@@ -230,6 +230,8 @@ export function writeAll(data: {
 
 // === SESSIONS ===
 import { Session, User } from './types';
+import { cookies, SESSION_COOKIE_NAME, getSessionCookieOptions } from './cookies';
+import { config } from './config';
 
 const SESSION_KEY = 'sk_session';
 const SESSION_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000; // 1 год
@@ -240,22 +242,51 @@ export const sessions = {
     foremanId?: string;
     role: 'admin' | 'foreman';
   }): Session => {
+    const sessionId = crypto.randomUUID();
     const session: Session = {
       ...data,
+      sessionId,
       expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
     };
+
+    // Production: устанавливаем cookie
+    if (config.isProduction) {
+      const cookieOptions = getSessionCookieOptions();
+      cookies.set(SESSION_COOKIE_NAME, sessionId, cookieOptions);
+    }
+    
+    // Demo mode: сохраняем в localStorage
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
   },
   
   get: (): Session | null => {
     try {
+      // Production: читаем из cookie
+      if (config.isProduction) {
+        const sessionId = cookies.get(SESSION_COOKIE_NAME);
+        if (!sessionId) return null;
+        
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        
+        const session: Session = JSON.parse(raw);
+        if (session.sessionId !== sessionId) return null;
+        
+        if (new Date(session.expiresAt) < new Date()) {
+          sessions.destroy();
+          return null;
+        }
+        return session;
+      }
+      
+      // Demo mode: читаем из localStorage
       const raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return null;
       const session: Session = JSON.parse(raw);
-      // Проверка истечения
+      
       if (new Date(session.expiresAt) < new Date()) {
-        localStorage.removeItem(SESSION_KEY);
+        sessions.destroy();
         return null;
       }
       return session;
@@ -265,6 +296,10 @@ export const sessions = {
   },
   
   destroy: (): void => {
+    // Удаляем cookie
+    cookies.remove(SESSION_COOKIE_NAME);
+    
+    // Удаляем localStorage
     localStorage.removeItem(SESSION_KEY);
   },
   
