@@ -7,7 +7,7 @@ import { getSessionCookieOptions } from "../utils/cookie";
 import { Session } from "../constants";
 import { Errors } from "../errors";
 import { signSessionToken, verifySessionToken } from "./session";
-import { kimiUsers } from "./platform";
+import { users as kimiUsers } from "./platform";
 import { findUserByUnionId, upsertUser } from "../queries/users";
 import type { TokenResponse } from "./types";
 

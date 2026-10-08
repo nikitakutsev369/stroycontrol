@@ -5,3 +5,10 @@ export interface TokenResponse {
   refresh_token?: string;
   scope?: string;
 }
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  avatar_url?: string;
+  email?: string;
+}

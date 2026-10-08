@@ -124,6 +124,16 @@ npm start
    - Access tokens проверяются через JWKS от Kimi
    - Срок действия: 1 год
 
+4. **Kimi API Client:**
+   ```typescript
+   import { users } from "./auth/platform";
+   
+   // Универсальная функция для запросов к Kimi API
+   const profile = await users.getProfile(accessToken);
+   ```
+   
+   Модуль `platform.ts` предоставляет типобезопасный клиент для Kimi Open API с автоматической обработкой ошибок и логированием.
+
 ### Сессии
 Сессии хранятся в httpOnly cookies (`kimi_sid`):
 - `httpOnly: true` — защита от XSS
@@ -149,17 +159,26 @@ backend/
 │   ├── index.ts              # Главный файл сервера
 │   ├── env.ts                # Переменные окружения
 │   ├── errors.ts             # Система ошибок
+│   ├── constants.ts          # Константы (Session)
+│   ├── auth/
+│   │   ├── auth.ts           # OAuth flow + authenticateRequest
+│   │   ├── session.ts        # JWT sign/verify (jose)
+│   │   ├── platform.ts       # Kimi API client
+│   │   └── types.ts          # TokenResponse, UserProfile
 │   ├── db/
 │   │   ├── index.ts          # Подключение к БД
 │   │   └── schema.ts         # Схема Drizzle ORM
 │   ├── routes/
-│   │   ├── auth.ts           # Авторизация
+│   │   ├── auth.ts           # Авторизация (OAuth + local)
 │   │   ├── projects.ts       # Проекты
 │   │   ├── brigades.ts       # Бригады
 │   │   ├── foremen.ts        # Прорабы
 │   │   ├── stages.ts         # Этапы
 │   │   └── notifications.ts  # Уведомления
+│   ├── queries/
+│   │   └── users.ts          # User queries (find/upsert)
 │   └── middleware/
+│       ├── auth.ts           # Auth middleware
 │       └── serve-static.ts   # Раздача frontend
 ├── package.json
 ├── tsconfig.json

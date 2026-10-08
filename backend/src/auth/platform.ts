@@ -1,30 +1,30 @@
 import { env } from "../env";
+import type { UserProfile } from "./types";
 
-export interface KimiUserProfile {
-  id: string;
-  name: string;
-  avatar_url?: string;
-  email?: string;
+async function kimiRequest<T>(
+  path: string,
+  token: string,
+  init?: RequestInit,
+): Promise<T | null> {
+  const resp = await fetch(`${env.kimiOpenUrl}${path}`, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.warn(
+      `[kimi] Request to ${path} failed (${resp.status}): ${text}`,
+    );
+    return null;
+  }
+  return resp.json() as Promise<T>;
 }
 
-export const kimiUsers = {
-  async getProfile(accessToken: string): Promise<KimiUserProfile | null> {
-    try {
-      const resp = await fetch(`${env.kimiOpenUrl}/api/v1/user/profile`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!resp.ok) {
-        console.error(`Failed to fetch profile: ${resp.status}`);
-        return null;
-      }
-
-      return resp.json() as Promise<KimiUserProfile>;
-    } catch (error) {
-      console.error("Error fetching Kimi profile:", error);
-      return null;
-    }
-  },
+export const users = {
+  getProfile: (token: string) =>
+    kimiRequest<UserProfile>("/v1/users/me/profile", token),
 };

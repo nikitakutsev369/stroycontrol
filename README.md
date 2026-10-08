@@ -39,11 +39,18 @@ stroycontrol/
 │   │   ├── index.ts        # Главный файл сервера
 │   │   ├── env.ts          # Переменные окружения
 │   │   ├── errors.ts       # Система ошибок
+│   │   ├── constants.ts    # Константы (Session)
+│   │   ├── auth/
+│   │   │   ├── auth.ts     # OAuth flow + authenticateRequest
+│   │   │   ├── session.ts  # JWT sign/verify (jose)
+│   │   │   ├── platform.ts # Kimi API client
+│   │   │   └── types.ts    # TokenResponse, UserProfile
 │   │   ├── db/
 │   │   │   ├── index.ts    # Подключение к БД
 │   │   │   └── schema.ts   # Drizzle ORM схема
 │   │   ├── routes/         # API endpoints
-│   │   └── middleware/     # Middleware
+│   │   ├── queries/        # DB queries
+│   │   └── middleware/     # Middleware (auth, serve-static)
 │   ├── package.json
 │   └── README.md
 │
