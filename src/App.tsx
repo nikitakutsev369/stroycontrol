@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Project, Brigade, Foreman, Stage, Notification, ViewMode } from './types';
-import {
-  getProjects, saveProjects, getBrigades, saveBrigades,
-  getForemen, saveForemen, getStages, saveStages,
-  getNotifications, saveNotifications, isSeeded, setSeeded
-} from './utils/storage';
+import { projects as projectsDB, crews as crewsDB, foremen as foremenDB, stages as stagesDB, notifications as notificationsDB, isSeeded, setSeeded, seedAll, writeAll } from './schema';
 import { getSeedData } from './utils/seed';
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO, differenceInDays, isBefore, format } from 'date-fns';
@@ -29,31 +25,28 @@ function App() {
   useEffect(() => {
     if (!isSeeded()) {
       const seed = getSeedData();
-      saveProjects(seed.projects);
-      saveBrigades(seed.brigades);
-      saveForemen(seed.foremen);
-      saveStages(seed.stages);
+      seedAll(seed);
       setSeeded();
       setProjects(seed.projects);
       setBrigades(seed.brigades);
       setForemen(seed.foremen);
       setStages(seed.stages);
     } else {
-      setProjects(getProjects());
-      setBrigades(getBrigades());
-      setForemen(getForemen());
-      setStages(getStages());
+      setProjects(projectsDB.select());
+      setBrigades(crewsDB.select());
+      setForemen(foremenDB.select());
+      setStages(stagesDB.select());
     }
-    setNotifications(getNotifications());
+    setNotifications(notificationsDB.select());
     setLoaded(true);
   }, []);
 
   // Persist
-  useEffect(() => { if (loaded) saveProjects(projects); }, [projects, loaded]);
-  useEffect(() => { if (loaded) saveBrigades(brigades); }, [brigades, loaded]);
-  useEffect(() => { if (loaded) saveForemen(foremen); }, [foremen, loaded]);
-  useEffect(() => { if (loaded) saveStages(stages); }, [stages, loaded]);
-  useEffect(() => { if (loaded) saveNotifications(notifications); }, [notifications, loaded]);
+  useEffect(() => { 
+    if (loaded) {
+      writeAll({ projects, brigades, foremen, stages, notifications });
+    }
+  }, [projects, brigades, foremen, stages, notifications, loaded]);
 
   // Check deadlines and generate notifications
   useEffect(() => {
