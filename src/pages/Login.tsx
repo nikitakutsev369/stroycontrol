@@ -171,6 +171,11 @@ export default function Login() {
                 <p className="text-muted-foreground">PIN: <code className="bg-background px-2 py-0.5 rounded">1234</code></p>
               </div>
             </div>
+            <div className="mt-4 text-center">
+              <a href="/foreman" className="text-xs text-primary hover:underline">
+                Перейти в кабинет прораба →
+              </a>
+            </div>
           </div>
         </div>
       </div>

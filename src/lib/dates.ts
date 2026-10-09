@@ -1,41 +1,40 @@
-export function parseDay(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
+// Работа с датами в формате YYYY-MM-DD (без часовых поясов)
+export function parseDay(s: string): Date {
+  const [y, m, d] = s.slice(0, 10).split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
-export function addDays(dateStr: string, days: number): string {
-  const d = parseDay(dateStr);
-  d.setDate(d.getDate() + days);
-  return formatDate(d);
-}
-
-export function diffDays(a: string, b: string): number {
-  const da = parseDay(a);
-  const db = parseDay(b);
-  return Math.round((db.getTime() - da.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-export function todayStr(): string {
-  return formatDate(new Date());
-}
-
-export function formatDate(d: Date): string {
+export function formatDay(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
-export function stageColor(status: string, endDate: string): string {
-  if (status === "done") return "#15803d";
-  if (isOverdue(endDate, status)) return "#c42121";
-  if (status === "in_progress") return "#d97706";
-  return "#94a3b8";
+export function todayStr(): string {
+  return formatDay(new Date());
+}
+
+export function addDays(s: string, n: number): string {
+  const d = parseDay(s);
+  d.setDate(d.getDate() + n);
+  return formatDay(d);
+}
+
+export function diffDays(a: string, b: string): number {
+  return Math.round((parseDay(b).getTime() - parseDay(a).getTime()) / 86400000);
+}
+
+export function humanDay(s: string): string {
+  return parseDay(s).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
+export function humanDayFull(s: string): string {
+  return parseDay(s).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 }
 
 export function isOverdue(endDate: string, status: string): boolean {
-  if (status === "done") return false;
-  return endDate < todayStr();
+  return status !== "done" && endDate < todayStr();
 }
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -43,3 +42,15 @@ export const STATUS_LABEL: Record<string, string> = {
   in_progress: "В работе",
   done: "Выполнен",
 };
+
+export const STATUS_COLOR: Record<string, string> = {
+  planned: "#94a3b8",
+  in_progress: "#d97706",
+  done: "#15803d",
+  overdue: "#c42121",
+};
+
+export function stageColor(status: string, endDate: string): string {
+  if (isOverdue(endDate, status)) return STATUS_COLOR.overdue;
+  return STATUS_COLOR[status] ?? STATUS_COLOR.planned;
+}
