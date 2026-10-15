@@ -1,249 +1,262 @@
-import React, { useMemo, useState } from 'react';
-import { Project, Task } from '../types';
-import { format, differenceInDays, parseISO, addDays, startOfDay, isBefore, isAfter } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { useMemo, useRef, useEffect } from "react";
+import {
+  parseDay,
+  addDays,
+  diffDays,
+  todayStr,
+  stageColor,
+  isOverdue,
+  STATUS_LABEL,
+} from "@/lib/dates";
 
-interface GanttChartProps {
+const DAY_W = 30;
+const ROW_H = 34;
+
+type Project = {
+  id: string;
+  name: string;
+};
+
+type Stage = {
+  id: string;
+  projectId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  progress: number;
+  crewId?: string | null;
+  foremanId?: string | null;
+};
+
+type Crew = {
+  id: string;
+  name: string;
+};
+
+type Foreman = {
+  id: string;
+  name: string;
+};
+
+type Props = {
   projects: Project[];
-  onToggleTask: (projectId: string, taskId: string) => void;
-  onUpdateTaskStatus: (projectId: string, taskId: string, status: Task['status']) => void;
-}
+  stages: Stage[];
+  crews: Crew[];
+  foremen: Foreman[];
+  onStageClick?: (stage: Stage) => void;
+};
 
-export default function GanttChart({ projects, onToggleTask, onUpdateTaskStatus }: GanttChartProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || '');
-  const [zoom, setZoom] = useState<'day' | 'week' | 'month'>('week');
+export default function GanttChart({ projects, stages, crews, foremen, onStageClick }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
-
-  const { minDate, maxDate, days, totalDays } = useMemo(() => {
-    if (!selectedProject || selectedProject.tasks.length === 0) {
-      const today = new Date();
-      return {
-        minDate: today,
-        maxDate: addDays(today, 30),
-        days: Array.from({ length: 30 }, (_, i) => addDays(today, i)),
-        totalDays: 30
-      };
+  const { start, totalDays } = useMemo(() => {
+    const today = todayStr();
+    if (stages.length === 0) {
+      return { start: addDays(today, -7), totalDays: 45 };
     }
+    let min = stages[0].startDate;
+    let max = stages[0].endDate;
+    for (const s of stages) {
+      if (s.startDate < min) min = s.startDate;
+      if (s.endDate > max) max = s.endDate;
+    }
+    const start = addDays(min < today ? min : today, -3);
+    const end = addDays(max > today ? max : today, 7);
+    return { start, totalDays: diffDays(start, end) + 1 };
+  }, [stages]);
 
-    const allDates = selectedProject.tasks.flatMap(t => [parseISO(t.startDate), parseISO(t.endDate)]);
-    const min = startOfDay(new Date(Math.min(...allDates.map(d => d.getTime()))));
-    const max = startOfDay(new Date(Math.max(...allDates.map(d => d.getTime()))));
-    
-    const start = addDays(min, -3);
-    const end = addDays(max, 3);
-    const total = differenceInDays(end, start) + 1;
-    const daysArr = Array.from({ length: total }, (_, i) => addDays(start, i));
+  const days = useMemo(
+    () => Array.from({ length: totalDays }, (_, i) => addDays(start, i)),
+    [start, totalDays]
+  );
 
-    return { minDate: start, maxDate: end, days: daysArr, totalDays: total };
-  }, [selectedProject]);
+  // центрирование на сегодня при загрузке
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const offset = diffDays(start, todayStr()) * DAY_W;
+    el.scrollLeft = Math.max(0, offset - el.clientWidth / 3);
+  }, [start]);
 
-  const getTaskPosition = (task: Task) => {
-    const start = differenceInDays(parseISO(task.startDate), minDate);
-    const duration = differenceInDays(parseISO(task.endDate), parseISO(task.startDate)) + 1;
-    const left = (start / totalDays) * 100;
-    const width = (duration / totalDays) * 100;
-    return { left: `${left}%`, width: `${width}%` };
-  };
+  const crewName = (id: string | null | undefined) => crews.find((c) => c.id === id)?.name ?? null;
+  const foremanName = (id: string | null | undefined) => foremen.find((f) => f.id === id)?.name ?? null;
 
-  const getTaskColor = (task: Task) => {
-    const status = task.status as string;
-    if (status === 'completed') return 'bg-green-500';
-    if (status === 'overdue' || (status !== 'completed' && isBefore(parseISO(task.endDate), new Date()))) return 'bg-red-500';
-    if (status === 'in_progress') return 'bg-blue-500';
-    return 'bg-yellow-500';
-  };
-
-  const cellWidth = useMemo(() => {
-    if (zoom === 'day') return 40;
-    if (zoom === 'week') return 24;
-    return 10;
-  }, [zoom]);
-
-  const headerDateFormat = useMemo(() => {
-    if (zoom === 'day') return 'd MMM';
-    if (zoom === 'week') return 'd MMM';
-    return 'MMM';
-  }, [zoom]);
-
-  const today = new Date();
-  const todayPosition = useMemo(() => {
-    const diff = differenceInDays(today, minDate);
-    return (diff / totalDays) * 100;
-  }, [minDate, totalDays]);
+  const today = todayStr();
+  const todayX = diffDays(start, today) * DAY_W;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-800">Диаграмма Ганта</h1>
-        
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setZoom('day')}
-              className={`px-3 py-1 text-xs rounded-md transition ${zoom === 'day' ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
-            >
-              Дни
-            </button>
-            <button
-              onClick={() => setZoom('week')}
-              className={`px-3 py-1 text-xs rounded-md transition ${zoom === 'week' ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
-            >
-              Недели
-            </button>
-            <button
-              onClick={() => setZoom('month')}
-              className={`px-3 py-1 text-xs rounded-md transition ${zoom === 'month' ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
-            >
-              Месяцы
-            </button>
+    <div className="border border-border rounded-lg bg-card overflow-hidden">
+      <div className="flex">
+        {/* Левая колонка: названия */}
+        <div className="w-[280px] shrink-0 border-r border-border">
+          <div className="h-[52px] border-b border-border flex items-end px-3 pb-2 text-xs font-medium text-muted-foreground">
+            Объект / этап
+          </div>
+          {projects.map((p) => {
+            const pStages = stages.filter((s) => s.projectId === p.id);
+            return (
+              <div key={p.id}>
+                <div
+                  className="px-3 flex items-center font-semibold text-sm bg-secondary/60 border-b border-border truncate"
+                  style={{ height: ROW_H }}
+                  title={p.name}
+                >
+                  {p.name}
+                </div>
+                {pStages.map((s) => (
+                  <div
+                    key={s.id}
+                    className="pl-6 pr-3 flex items-center text-sm border-b border-border truncate cursor-pointer hover:bg-accent"
+                    style={{ height: ROW_H }}
+                    onClick={() => onStageClick?.(s)}
+                    title={s.name}
+                  >
+                    <span
+                      className="inline-block w-2 h-2 rounded-full mr-2 shrink-0"
+                      style={{ background: stageColor(s.status, s.endDate) }}
+                    />
+                    <span className="truncate">{s.name}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          {projects.length === 0 && (
+            <div className="p-4 text-sm text-muted-foreground">Нет объектов</div>
+          )}
+        </div>
+
+        {/* Таймлайн */}
+        <div ref={scrollRef} className="overflow-x-auto flex-1">
+          <div style={{ width: totalDays * DAY_W }}>
+            {/* Заголовок дат */}
+            <div className="h-[52px] border-b border-border relative">
+              {days.map((d, i) => {
+                const date = parseDay(d);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isFirst = date.getDate() === 1 || i === 0;
+                return (
+                  <div
+                    key={d}
+                    className={`absolute top-0 h-full border-l border-border/60 text-center ${isWeekend ? "bg-secondary/40" : ""}`}
+                    style={{ left: i * DAY_W, width: DAY_W }}
+                  >
+                    <div className="text-[10px] text-muted-foreground pt-1 leading-tight">
+                      {isFirst
+                        ? date.toLocaleDateString("ru-RU", { month: "short" })
+                        : ""}
+                    </div>
+                    <div className={`text-[11px] leading-tight ${d === today ? "font-bold text-destructive" : ""}`}>
+                      {date.getDate()}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* линия сегодня */}
+              <div
+                className="absolute top-0 bottom-0 w-px bg-destructive z-10"
+                style={{ left: todayX + DAY_W / 2 }}
+              />
+            </div>
+
+            {/* Строки */}
+            {projects.map((p) => {
+              const pStages = stages.filter((s) => s.projectId === p.id);
+              return (
+                <div key={p.id}>
+                  <div
+                    className="relative border-b border-border bg-secondary/30"
+                    style={{ height: ROW_H }}
+                  >
+                    {/* общий диапазон проекта */}
+                    {pStages.length > 0 && (
+                      <ProjectRange stages={pStages} start={start} />
+                    )}
+                  </div>
+                  {pStages.map((s) => {
+                    const left = diffDays(start, s.startDate) * DAY_W;
+                    const width = Math.max(DAY_W, (diffDays(s.startDate, s.endDate) + 1) * DAY_W);
+                    const color = stageColor(s.status, s.endDate);
+                    return (
+                      <div
+                        key={s.id}
+                        className="relative border-b border-border"
+                        style={{ height: ROW_H }}
+                      >
+                        {/* фон выходных */}
+                        {days.map((d, i) => {
+                          const date = parseDay(d);
+                          return date.getDay() === 0 || date.getDay() === 6 ? (
+                            <div
+                              key={d}
+                              className="absolute top-0 h-full bg-secondary/30"
+                              style={{ left: i * DAY_W, width: DAY_W }}
+                            />
+                          ) : null;
+                        })}
+                        <div
+                          className="absolute top-[7px] h-5 rounded cursor-pointer group"
+                          style={{ left, width, background: color + "33", border: `1px solid ${color}` }}
+                          onClick={() => onStageClick?.(s)}
+                          title={`${s.name}\n${s.startDate} — ${s.endDate}\n${STATUS_LABEL[s.status]}${isOverdue(s.endDate, s.status) ? " (просрочен)" : ""}${crewName(s.crewId) ? `\nБригада: ${crewName(s.crewId)}` : ""}${foremanName(s.foremanId) ? `\nПрораб: ${foremanName(s.foremanId)}` : ""}`}
+                        >
+                          {/* прогресс */}
+                          <div
+                            className="h-full rounded-l"
+                            style={{ width: `${s.status === "done" ? 100 : s.progress}%`, background: color + "66" }}
+                          />
+                          {width > 110 && (
+                            <span className="absolute inset-0 flex items-center px-2 text-[11px] truncate" style={{ color }}>
+                              {s.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {selectedProject && selectedProject.tasks.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          {/* Legend */}
-          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap gap-4 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-yellow-500"></div>
-              <span>Ожидает</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-blue-500"></div>
-              <span>В работе</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-green-500"></div>
-              <span>Завершено</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-red-500"></div>
-              <span>Просрочено</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-3 bg-red-400"></div>
-              <span>Сегодня</span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <div style={{ minWidth: `${Math.max(800, totalDays * cellWidth)}px` }}>
-              {/* Header - dates */}
-              <div className="flex border-b border-gray-200 bg-gray-50">
-                <div className="w-64 min-w-[256px] px-4 py-2 font-medium text-sm text-gray-600 border-r border-gray-200 sticky left-0 bg-gray-50 z-10">
-                  Задача
-                </div>
-                <div className="flex-1 relative">
-                  <div className="flex">
-                    {days.map((day, i) => {
-                      const isToday = format(day, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
-                      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                      return (
-                        <div
-                          key={i}
-                          className={`text-center text-xs py-2 border-r border-gray-100 ${
-                            isToday ? 'bg-blue-50 font-bold text-blue-600' : 
-                            isWeekend ? 'bg-gray-100 text-gray-400' : 'text-gray-500'
-                          }`}
-                          style={{ width: `${cellWidth}px`, minWidth: `${cellWidth}px` }}
-                        >
-                          {(zoom === 'day' || (zoom === 'week' && i % 7 === 0) || (zoom === 'month' && day.getDate() === 1)) && 
-                            format(day, headerDateFormat, { locale: ru })
-                          }
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Tasks */}
-              {selectedProject.tasks
-                .sort((a, b) => a.order - b.order)
-                .map((task, idx) => {
-                  const pos = getTaskPosition(task);
-                  const isOverdue = task.status !== 'completed' && isBefore(parseISO(task.endDate), today);
-                  
-                  return (
-                    <div key={task.id} className={`flex border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30 transition`}>
-                      <div className="w-64 min-w-[256px] px-4 py-3 border-r border-gray-200 sticky left-0 bg-inherit z-10">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onToggleTask(selectedProject.id, task.id)}
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
-                              task.status === 'completed' 
-                                ? 'bg-green-500 border-green-500 text-white' 
-                                : 'border-gray-300 hover:border-blue-400'
-                            }`}
-                          >
-                            {task.status === 'completed' && (
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </button>
-                          <div>
-                            <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                              {task.name}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {format(parseISO(task.startDate), 'd MMM', { locale: ru })} — {format(parseISO(task.endDate), 'd MMM', { locale: ru })}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-1 relative h-12">
-                        {/* Grid lines */}
-                        <div className="absolute inset-0 flex">
-                          {days.map((_, i) => (
-                            <div
-                              key={i}
-                              className={`border-r ${i % 7 === 0 ? 'border-gray-200' : 'border-gray-100'}`}
-                              style={{ width: `${cellWidth}px`, minWidth: `${cellWidth}px` }}
-                            ></div>
-                          ))}
-                        </div>
-                        
-                        {/* Today marker */}
-                        <div
-                          className="absolute top-0 bottom-0 w-0.5 bg-red-400 z-10 opacity-60"
-                          style={{ left: `${todayPosition}%` }}
-                        ></div>
-                        
-                        {/* Task bar */}
-                        <div
-                          className={`absolute top-2 h-8 rounded-md ${getTaskColor(task)} opacity-90 hover:opacity-100 transition cursor-pointer shadow-sm flex items-center px-2`}
-                          style={{ left: pos.left, width: pos.width }}
-                          title={`${task.name}: ${format(parseISO(task.startDate), 'd MMM', { locale: ru })} — ${format(parseISO(task.endDate), 'd MMM', { locale: ru })}`}
-                        >
-                          <span className="text-white text-xs font-medium truncate">{task.name}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <div className="text-6xl mb-4">📊</div>
-          <p className="text-gray-500 text-lg">
-            {projects.length === 0 ? 'Добавьте проект, чтобы увидеть диаграмму Ганта' : 'В этом проекте пока нет задач'}
-          </p>
-        </div>
-      )}
+      {/* Легенда */}
+      <div className="flex flex-wrap gap-4 px-3 py-2 border-t border-border text-xs text-muted-foreground">
+        <Legend color="#94a3b8" label="Запланирован" />
+        <Legend color="#d97706" label="В работе" />
+        <Legend color="#15803d" label="Выполнен" />
+        <Legend color="#c42121" label="Просрочен" />
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-px h-3 bg-destructive" /> Сегодня
+        </span>
+      </div>
     </div>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="inline-block w-3 h-3 rounded-sm" style={{ background: color }} /> {label}
+    </span>
+  );
+}
+
+function ProjectRange({ stages, start }: { stages: Stage[]; start: string }) {
+  let min = stages[0].startDate;
+  let max = stages[0].endDate;
+  for (const s of stages) {
+    if (s.startDate < min) min = s.startDate;
+    if (s.endDate > max) max = s.endDate;
+  }
+  const left = diffDays(start, min) * DAY_W;
+  const width = (diffDays(min, max) + 1) * DAY_W;
+  return (
+    <div
+      className="absolute top-[13px] h-2 rounded-full bg-primary/70"
+      style={{ left, width }}
+    />
   );
 }
